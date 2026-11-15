@@ -22,14 +22,18 @@ import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.VideoLibrary
+import androidx.compose.material.icons.outlined.PlayCircleOutline
 import androidx.compose.material.icons.rounded.Explore
+import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,9 +63,12 @@ import com.aliveness.offline.ui.screens.SettingsScreen
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
+private const val REELS_TAB = "reels_tab"
+
 private val Tabs = listOf(
     NavTab("home", "Home", Icons.Outlined.Home, Icons.Rounded.Home),
     NavTab("explore", "Explore", Icons.Outlined.Explore, Icons.Rounded.Explore),
+    NavTab(REELS_TAB, "Reels", Icons.Outlined.PlayCircleOutline, Icons.Rounded.PlayCircle),
     NavTab("library", "Library", Icons.Outlined.VideoLibrary, Icons.Rounded.VideoLibrary),
     NavTab("search", "Search", Icons.Outlined.Search, Icons.Rounded.Search),
 )
@@ -80,9 +87,12 @@ private fun isImmersive(route: String?) = route != null && (route.startsWith("re
 fun AlivenessRoot(vm: MainViewModel, onImmersiveChanged: (Boolean) -> Unit) {
     val nav = rememberNavController()
     val haze = remember { HazeState() }
+    val settings by vm.settings.collectAsState()
+    val context = LocalContext.current
+    val tabs = remember(settings.dockReels) { if (settings.dockReels) Tabs else Tabs.filter { it.route != REELS_TAB } }
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route
-    val showBar = route in Tabs.map { it.route }
+    val showBar = route in tabs.map { it.route }
     val immersive = isImmersive(route)
     SideEffect { onImmersiveChanged(immersive) }
 
@@ -144,10 +154,18 @@ fun AlivenessRoot(vm: MainViewModel, onImmersiveChanged: (Boolean) -> Unit) {
             exit = slideOutVertically(tween(220)) { it } + fadeOut(),
         ) {
             GlassNavBar(
-                tabs = Tabs, selectedRoute = route, haze = haze,
+                tabs = tabs, selectedRoute = route, haze = haze,
+                liquid = settings.liquidDock, haptics = settings.dockHaptics,
                 modifier = Modifier.navigationBarsPadding().padding(bottom = 12.dp),
                 onSelect = { tab ->
-                    if (tab.route != route) nav.navigate(tab.route) {
+                    if (tab.route == REELS_TAB) {
+                        val reels = vm.queue(Source.REELS)
+                        if (reels.isEmpty()) {
+                            android.widget.Toast.makeText(context, "No Reels found yet. Portrait clips under 3 minutes show up here.", android.widget.Toast.LENGTH_LONG).show()
+                        } else {
+                            nav.navigate("reels/${Uri.encode(Source.REELS)}/${reels.first().id}")
+                        }
+                    } else if (tab.route != route) nav.navigate(tab.route) {
                         popUpTo("home") { saveState = true }
                         launchSingleTop = true
                         restoreState = true

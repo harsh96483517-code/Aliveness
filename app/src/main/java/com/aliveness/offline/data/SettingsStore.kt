@@ -27,6 +27,9 @@ data class AppSettings(
     val thumbQuality: Int = 1,
     val reelsCrop: Boolean = true,
     val resumePlayback: Boolean = true,
+    val dockReels: Boolean = true,
+    val liquidDock: Boolean = true,
+    val dockHaptics: Boolean = true,
     val hiddenFolders: Set<String> = emptySet(),
     val lastScanAt: Long = 0L,
 ) {
@@ -43,6 +46,9 @@ object Keys {
     val thumbQuality = intPreferencesKey("thumb_quality")
     val reelsCrop = booleanPreferencesKey("reels_crop")
     val resume = booleanPreferencesKey("resume")
+    val dockReels = booleanPreferencesKey("dock_reels")
+    val liquidDock = booleanPreferencesKey("liquid_dock")
+    val dockHaptics = booleanPreferencesKey("dock_haptics")
     val hidden = stringSetPreferencesKey("hidden_folders")
     val lastScan = longPreferencesKey("last_scan")
 }
@@ -60,6 +66,9 @@ class SettingsStore(private val context: Context) {
             thumbQuality = p[Keys.thumbQuality] ?: 1,
             reelsCrop = p[Keys.reelsCrop] ?: true,
             resumePlayback = p[Keys.resume] ?: true,
+            dockReels = p[Keys.dockReels] ?: true,
+            liquidDock = p[Keys.liquidDock] ?: true,
+            dockHaptics = p[Keys.dockHaptics] ?: true,
             hiddenFolders = p[Keys.hidden] ?: emptySet(),
             lastScanAt = p[Keys.lastScan] ?: 0L,
         )

@@ -75,6 +75,11 @@ fun SettingsScreen(vm: MainViewModel, onBack: () -> Unit, onFolders: () -> Unit)
                 ) { vm.setSetting(Keys.dynamic, it) }
             }
 
+            item { Header("Dock") }
+            item { SwitchRow("Reels button in dock", "Open the Reels viewer straight from the bottom bar", s.dockReels) { vm.setSetting(Keys.dockReels, it) } }
+            item { SwitchRow("Liquid glass drag", "Press and slide along the dock: the glass lens pops up and follows your finger", s.liquidDock) { vm.setSetting(Keys.liquidDock, it) } }
+            item { SwitchRow("Dock haptics", "Small tick when the lens moves to another tab", s.dockHaptics, enabled = s.liquidDock) { vm.setSetting(Keys.dockHaptics, it) } }
+
             item { Header("Playback") }
             item { SwitchRow("Autoplay", "Start playing as soon as a video opens", s.autoplay) { vm.setSetting(Keys.autoplay, it) } }
             item { SwitchRow("Auto-play next Reel", "Move on when a Reel ends", s.autoNext) { vm.setSetting(Keys.autoNext, it) } }

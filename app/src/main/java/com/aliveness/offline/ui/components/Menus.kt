@@ -5,6 +5,24 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -84,7 +102,10 @@ fun shareVideo(context: Context, video: VideoItem) {
 
 data class NavTab(val route: String, val label: String, val icon: ImageVector, val selectedIcon: ImageVector)
 
-/** Floating pill with the frosted-glass treatment: it blurs whatever scrolls underneath it. */
+/**
+ * Floating frosted-glass dock. Press anywhere on it and a glass lens pops up under your finger; slide to
+ * another tab and let go to open it. A plain tap works the same way. With [liquid] off the lens is a flat pill.
+ */
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 fun GlassNavBar(
@@ -93,41 +114,123 @@ fun GlassNavBar(
     onSelect: (NavTab) -> Unit,
     haze: HazeState,
     modifier: Modifier = Modifier,
+    liquid: Boolean = true,
+    haptics: Boolean = true,
 ) {
     val container = MaterialTheme.colorScheme.surface
-    val shape = RoundedCornerShape(32.dp)
-    Row(
-        modifier
-            .padding(horizontal = 24.dp)
-            .fillMaxWidth()
-            .height(64.dp)
-            .clip(shape)
-            .hazeEffect(haze, HazeMaterials.regular(container))
-            .background(container.copy(alpha = 0.55f))
-            .border(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f), shape),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        tabs.forEach { tab ->
-            val selected = tab.route == selectedRoute
-            val bg by animateColorAsState(
-                if (selected) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f) else Color.Transparent,
-                label = "tabBg",
-            )
-            val tint by animateColorAsState(
-                if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                label = "tabTint",
-            )
-            Column(
-                Modifier.weight(1f).fillMaxHeight().padding(6.dp)
-                    .clip(RoundedCornerShape(26.dp)).background(bg)
-                    .clickable { onSelect(tab) },
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Icon(if (selected) tab.selectedIcon else tab.icon, tab.label, tint = tint, modifier = Modifier.size(24.dp))
-                Text(tab.label, color = tint, fontSize = 10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.W600)
+    val outline = MaterialTheme.colorScheme.outline
+    val barShape = RoundedCornerShape(32.dp)
+    val lensShape = RoundedCornerShape(28.dp)
+    val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
+    val currentOnSelect by rememberUpdatedState(onSelect)
+    val selectedIndex = tabs.indexOfFirst { it.route == selectedRoute }.coerceAtLeast(0)
+
+    BoxWithConstraints(modifier.padding(horizontal = 24.dp).fillMaxWidth().height(64.dp)) {
+        val barW = with(density) { maxWidth.toPx() }
+        val tabW = barW / tabs.size
+        var pressed by remember { mutableStateOf(false) }
+        var fingerX by remember { mutableFloatStateOf(0f) }
+
+        val targetCenter = if (pressed) fingerX.coerceIn(tabW / 2, barW - tabW / 2) else tabW * (selectedIndex + 0.5f)
+        val center by animateFloatAsState(
+            targetValue = targetCenter,
+            animationSpec = if (pressed) spring(stiffness = Spring.StiffnessHigh)
+            else spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
+            label = "lensX",
+        )
+        val pop by animateFloatAsState(
+            targetValue = if (pressed && liquid) 1f else 0f,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+            label = "pop",
+        )
+        val activeIndex = (center / tabW).toInt().coerceIn(0, tabs.size - 1)
+
+        LaunchedEffect(activeIndex, pressed) {
+            if (pressed && haptics && liquid) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        }
+
+        // The glass bar itself.
+        Box(
+            Modifier.matchParentSize().clip(barShape)
+                .hazeEffect(haze, HazeMaterials.regular(container))
+                .background(container.copy(alpha = 0.55f))
+                .border(0.5.dp, outline.copy(alpha = 0.7f), barShape),
+        )
+
+        // The lens: sits above the bar so it can swell past its edges while pressed.
+        Box(
+            Modifier
+                .align(Alignment.CenterStart)
+                .offset { IntOffset((center - tabW / 2 + 0f).roundToInt(), 0) }
+                .width(with(density) { tabW.toDp() })
+                .height(52.dp)
+                .graphicsLayer {
+                    val sc = 1f + 0.34f * pop
+                    scaleX = sc; scaleY = 1f + 0.42f * pop
+                    translationY = -10.dp.toPx() * pop
+                }
+                .clip(lensShape)
+                .hazeEffect(haze, HazeMaterials.ultraThin(container))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.10f + 0.16f * pop),
+                            Color.White.copy(alpha = 0.03f + 0.05f * pop),
+                        ),
+                    ),
+                )
+                .border(
+                    width = (0.6f + 0.6f * pop).dp,
+                    brush = Brush.verticalGradient(
+                        listOf(Color.White.copy(alpha = 0.35f + 0.4f * pop), Color.White.copy(alpha = 0.06f)),
+                    ),
+                    shape = lensShape,
+                ),
+        )
+
+        // Icons and labels.
+        Row(Modifier.matchParentSize()) {
+            tabs.forEachIndexed { i, tab ->
+                val active = if (pressed) i == activeIndex else tab.route == selectedRoute
+                val tint by animateColorAsState(
+                    if (active) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                    label = "tabTint",
+                )
+                Column(
+                    Modifier.weight(1f).fillMaxHeight(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Icon(if (active) tab.selectedIcon else tab.icon, tab.label, tint = tint, modifier = Modifier.size(24.dp))
+                    Text(tab.label, color = tint, fontSize = 10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.W600)
+                }
             }
         }
+
+        // One gesture for tap and drag: press pops the lens, slide moves it, release opens the tab under it.
+        Box(
+            Modifier.matchParentSize().pointerInput(tabs.size, barW) {
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    pressed = true
+                    fingerX = down.position.x
+                    var last = down.position.x
+                    do {
+                        val ev = awaitPointerEvent()
+                        val ch = ev.changes.firstOrNull { it.id == down.id }
+                        if (ch != null) {
+                            last = ch.position.x
+                            fingerX = last
+                            ch.consume()
+                        }
+                    } while (ev.changes.any { it.pressed })
+                    pressed = false
+                    val idx = (last / tabW).toInt().coerceIn(0, tabs.size - 1)
+                    currentOnSelect(tabs[idx])
+                }
+            },
+        )
     }
 }
 
