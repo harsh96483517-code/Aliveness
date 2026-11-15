@@ -38,6 +38,7 @@ import com.aliveness.offline.data.formatSize
 import com.aliveness.offline.data.toFolders
 import com.aliveness.offline.player.SpeedSteps
 import com.aliveness.offline.player.speedLabel
+import com.aliveness.offline.ui.AppLockRow
 import com.aliveness.offline.ui.components.SubTopBar
 import com.aliveness.offline.ui.theme.Dimens
 import java.text.DateFormat
