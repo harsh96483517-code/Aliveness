@@ -80,6 +80,17 @@ fun SettingsScreen(vm: MainViewModel, onBack: () -> Unit, onFolders: () -> Unit)
             item { SwitchRow("Liquid glass drag", "Press and slide along the dock: the glass lens pops up and follows your finger", s.liquidDock) { vm.setSetting(Keys.liquidDock, it) } }
             item { SwitchRow("Dock haptics", "Small tick when the lens moves to another tab", s.dockHaptics, enabled = s.liquidDock) { vm.setSetting(Keys.dockHaptics, it) } }
 
+            item { Choice("Dock size", listOf("Compact", "Large"), if (s.dockLarge) 1 else 0) { vm.setSetting(Keys.dockLarge, it == 1) } }
+            item { Choice("Dock glass", listOf("Clear", "Frosted", "Solid"), s.dockGlass) { vm.setSetting(Keys.dockGlass, it) } }
+
+            item { Header("Reels") }
+            item { SwitchRow("Start muted", "Reels open with sound off", s.reelsMuted) { vm.setSetting(Keys.reelsMuted, it) } }
+            item { SwitchRow("Show caption", "Video name under the folder name", s.reelsCaption) { vm.setSetting(Keys.reelsCaption, it) } }
+            item { SwitchRow("Show progress bar", "Thin scrub bar along the bottom", s.reelsProgress) { vm.setSetting(Keys.reelsProgress, it) } }
+
+            item { Header("Security") }
+            item { AppLockRow(vm, s.appLock) }
+
             item { Header("Playback") }
             item { SwitchRow("Autoplay", "Start playing as soon as a video opens", s.autoplay) { vm.setSetting(Keys.autoplay, it) } }
             item { SwitchRow("Auto-play next Reel", "Move on when a Reel ends", s.autoNext) { vm.setSetting(Keys.autoNext, it) } }
@@ -164,7 +175,7 @@ private fun Header(text: String) {
 }
 
 @Composable
-private fun SwitchRow(title: String, subtitle: String, checked: Boolean, enabled: Boolean = true, onChange: (Boolean) -> Unit) {
+internal fun SwitchRow(title: String, subtitle: String, checked: Boolean, enabled: Boolean = true, onChange: (Boolean) -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable(enabled = enabled) { onChange(!checked) }
             .padding(horizontal = Dimens.PageGutter, vertical = 10.dp),

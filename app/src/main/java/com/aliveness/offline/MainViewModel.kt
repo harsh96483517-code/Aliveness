@@ -39,8 +39,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** False until the database has answered once, so "empty" and "still loading" look different. */
     val loaded = MutableStateFlow(false)
 
+    /** True once saved settings are read, so the app lock never flashes content before it knows. */
+    val settingsReady = MutableStateFlow(false)
+    val unlocked = MutableStateFlow(false)
+
     init {
         viewModelScope.launch { repo.visible.first(); loaded.value = true }
+        viewModelScope.launch { store.flow.first(); settingsReady.value = true }
     }
 
     fun refresh() { viewModelScope.launch { repo.refresh() } }

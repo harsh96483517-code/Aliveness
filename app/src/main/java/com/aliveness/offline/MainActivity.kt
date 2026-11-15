@@ -6,7 +6,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,6 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -46,8 +47,13 @@ import com.aliveness.offline.ui.components.EmptyState
 import com.aliveness.offline.ui.theme.AlivenessTheme
 import com.aliveness.offline.ui.theme.LocalThumbPx
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     private val vm: MainViewModel by viewModels()
+
+    override fun onStop() {
+        super.onStop()
+        vm.unlocked.value = false   // locks again when you leave the app (only matters if App lock is on)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,7 +72,12 @@ class MainActivity : ComponentActivity() {
                             isAppearanceLightNavigationBars = !darkBg && !immersive
                         }
                     }
-                    PermissionGate(vm) { AlivenessRoot(vm) { immersive = it } }
+                    SideEffect {
+                        // Hide the app from the recents screen while the lock is on.
+                        if (settings.appLock) window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                        else window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                    }
+                    LockGate(vm) { PermissionGate(vm) { AlivenessRoot(vm) { immersive = it } } }
                 }
             }
         }
@@ -112,5 +123,17 @@ private fun PermissionGate(vm: MainViewModel, content: @Composable () -> Unit) {
                 }) { Text("Open app settings") }
             }
         }
+    }
+}
+
+@Composable
+private fun LockGate(vm: MainViewModel, content: @Composable () -> Unit) {
+    val ready by vm.settingsReady.collectAsState()
+    val settings by vm.settings.collectAsState()
+    val unlocked by vm.unlocked.collectAsState()
+    when {
+        !ready -> Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
+        settings.appLock && !unlocked -> com.aliveness.offline.ui.LockScreen { vm.unlocked.value = true }
+        else -> content()
     }
 }

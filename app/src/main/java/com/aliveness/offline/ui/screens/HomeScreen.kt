@@ -28,7 +28,7 @@ import com.aliveness.offline.data.Source
 import com.aliveness.offline.data.VideoItem
 import com.aliveness.offline.ui.components.EmptyState
 import com.aliveness.offline.ui.components.FeaturedCard
-import com.aliveness.offline.ui.components.ScreenTitle
+import com.aliveness.offline.ui.components.BrandHeader
 import com.aliveness.offline.ui.components.SkeletonShelf
 import com.aliveness.offline.ui.components.VideoMenuHost
 import com.aliveness.offline.ui.components.VideoShelf
@@ -75,7 +75,7 @@ fun HomeScreen(
             contentPadding = PaddingValues(top = top, bottom = Dimens.NavBarSpace),
         ) {
             item {
-                ScreenTitle("Home") {
+                BrandHeader {
                     IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, "Settings") }
                 }
             }

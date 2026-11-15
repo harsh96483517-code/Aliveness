@@ -12,6 +12,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -40,6 +41,9 @@ import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FitScreen
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.VolumeOff
+import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material3.Button
@@ -83,6 +87,7 @@ import com.aliveness.offline.player.rememberExoPlayer
 import com.aliveness.offline.player.rememberPlayerUi
 import com.aliveness.offline.player.rememberPosition
 import com.aliveness.offline.player.speedLabel
+import com.aliveness.offline.ui.components.AppLogo
 import com.aliveness.offline.ui.components.KeepScreenOn
 import com.aliveness.offline.ui.components.VideoMenuHost
 import com.aliveness.offline.ui.components.VideoThumb
@@ -117,6 +122,7 @@ fun ReelsScreen(source: String, startId: Long, vm: MainViewModel, onBack: () -> 
     val live = remember(everything) { everything.associateBy { it.id } }
     var crop by remember(settings.reelsCrop) { mutableStateOf(settings.reelsCrop) }
     var menu by remember { mutableStateOf<VideoItem?>(null) }
+    var muted by remember(settings.reelsMuted) { mutableStateOf(settings.reelsMuted) }
     var heartTick by remember { mutableIntStateOf(0) }
     var showHeart by remember { mutableStateOf(false) }
 
@@ -158,6 +164,7 @@ fun ReelsScreen(source: String, startId: Long, vm: MainViewModel, onBack: () -> 
     LaunchedEffect(heartTick) {
         if (heartTick > 0) { showHeart = true; delay(650); showHeart = false }
     }
+    LaunchedEffect(muted) { player.volume = if (muted) 0f else 1f }
     KeepScreenOn()
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
@@ -240,17 +247,35 @@ fun ReelsScreen(source: String, startId: Long, vm: MainViewModel, onBack: () -> 
                     ) { Icon(Icons.Rounded.Favorite, null, tint = AccentRed, modifier = Modifier.size(110.dp)) }
                 }
 
-                // Title block.
+                // Instagram-style author block: avatar + folder name, caption, audio line.
                 Column(
                     Modifier.align(Alignment.BottomStart).navigationBarsPadding()
-                        .padding(start = 16.dp, end = 84.dp, bottom = 34.dp),
+                        .padding(start = 14.dp, end = 84.dp, bottom = 34.dp),
                 ) {
-                    Text(v.title, color = Color.White, style = MaterialTheme.typography.titleMedium,
-                        maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text(
-                        "${v.folderName} · ${formatDuration(v.durationMs)}",
-                        color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        AppLogo(34.dp, Modifier.border(1.5.dp, Color.White, RoundedCornerShape(10.dp)))
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            v.folderName, color = Color.White, style = MaterialTheme.typography.titleSmall,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    if (settings.reelsCaption) {
+                        Spacer(Modifier.height(10.dp))
+                        Text(v.title, color = Color.White, style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        Modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.3f))
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Rounded.MusicNote, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Original audio · ${formatDuration(v.durationMs)}", color = Color.White,
+                            fontSize = 11.sp, maxLines = 1)
+                    }
                 }
 
                 // Action rail.
@@ -264,6 +289,7 @@ fun ReelsScreen(source: String, startId: Long, vm: MainViewModel, onBack: () -> 
                         "Favorite", tint = if (v.favorite) AccentRed else Color.White,
                     ) { vm.toggleFavorite(v.id) }
                     RailButton(Icons.Outlined.Share, "Share") { shareVideo(context, v) }
+                    RailButton(if (muted) Icons.Rounded.VolumeOff else Icons.Rounded.VolumeUp, if (muted) "Unmute" else "Mute") { muted = !muted }
                     RailText(speedLabel(ui.speed)) {
                         val i = SpeedSteps.indexOf(ui.speed).let { if (it < 0) SpeedSteps.indexOf(1f) else it }
                         player.setPlaybackSpeed(SpeedSteps[(i + 1) % SpeedSteps.size])
@@ -272,7 +298,7 @@ fun ReelsScreen(source: String, startId: Long, vm: MainViewModel, onBack: () -> 
                     RailButton(Icons.Rounded.MoreVert, "More") { player.pause(); menu = v }
                 }
 
-                if (isCurrent) {
+                if (isCurrent && settings.reelsProgress) {
                     SeekStrip(
                         positionMs = pos.first, durationMs = pos.second,
                         onSeek = { f -> if (pos.second > 0) player.seekTo((pos.second * f).toLong()) },
@@ -290,6 +316,8 @@ fun ReelsScreen(source: String, startId: Long, vm: MainViewModel, onBack: () -> 
             IconButton(onClick = { saveCurrent(); onBack() }) {
                 Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Color.White)
             }
+            AppLogo(28.dp)
+            Spacer(Modifier.width(10.dp))
             Text("Reels", color = Color.White, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
             Text("${settled + 1} / ${queue.size}", color = Color.White.copy(alpha = 0.75f),
                 style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(end = 16.dp))

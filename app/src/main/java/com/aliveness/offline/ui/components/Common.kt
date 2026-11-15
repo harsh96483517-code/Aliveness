@@ -402,12 +402,35 @@ fun VideoRow(
 }
 
 @Composable
+fun AppLogo(size: Dp, modifier: Modifier = Modifier) {
+    androidx.compose.foundation.Image(
+        painter = androidx.compose.ui.res.painterResource(com.aliveness.offline.R.drawable.ic_launcher_art),
+        contentDescription = "Aliveness",
+        modifier = modifier.size(size).clip(RoundedCornerShape(size * 0.28f)),
+    )
+}
+
+/** Logo + app name across the top of Home. */
+@Composable
+fun BrandHeader(modifier: Modifier = Modifier, trailing: @Composable (() -> Unit)? = null) {
+    Row(
+        modifier.fillMaxWidth().padding(horizontal = Dimens.PageGutter, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AppLogo(44.dp)
+        Spacer(Modifier.width(12.dp))
+        Text("Aliveness", style = MaterialTheme.typography.displayLarge, modifier = Modifier.weight(1f))
+        trailing?.invoke()
+    }
+}
+
+@Composable
 fun ScreenTitle(text: String, modifier: Modifier = Modifier, trailing: @Composable (() -> Unit)? = null) {
     Row(
         modifier.fillMaxWidth().padding(horizontal = Dimens.PageGutter, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(text, style = MaterialTheme.typography.displayLarge, modifier = Modifier.weight(1f))
-        trailing?.invoke()
+        if (trailing != null) trailing() else AppLogo(34.dp)
     }
 }

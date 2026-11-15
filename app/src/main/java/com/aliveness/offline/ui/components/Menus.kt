@@ -116,6 +116,8 @@ fun GlassNavBar(
     modifier: Modifier = Modifier,
     liquid: Boolean = true,
     haptics: Boolean = true,
+    large: Boolean = true,
+    glass: Int = 0,
 ) {
     val container = MaterialTheme.colorScheme.surface
     val outline = MaterialTheme.colorScheme.outline
@@ -124,9 +126,11 @@ fun GlassNavBar(
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
     val currentOnSelect by rememberUpdatedState(onSelect)
+    val barH = if (large) 78.dp else 64.dp
+    val fill = when (glass) { 0 -> 0.22f; 1 -> 0.55f; else -> 0.94f }
     val selectedIndex = tabs.indexOfFirst { it.route == selectedRoute }.coerceAtLeast(0)
 
-    BoxWithConstraints(modifier.padding(horizontal = 24.dp).fillMaxWidth().height(64.dp)) {
+    BoxWithConstraints(modifier.padding(horizontal = if (large) 16.dp else 24.dp).fillMaxWidth().height(barH)) {
         val barW = with(density) { maxWidth.toPx() }
         val tabW = barW / tabs.size
         var pressed by remember { mutableStateOf(false) }
@@ -153,8 +157,8 @@ fun GlassNavBar(
         // The glass bar itself.
         Box(
             Modifier.matchParentSize().clip(barShape)
-                .hazeEffect(haze, HazeMaterials.regular(container))
-                .background(container.copy(alpha = 0.55f))
+                .hazeEffect(haze, if (glass == 0) HazeMaterials.ultraThin(container) else HazeMaterials.regular(container))
+                .background(container.copy(alpha = fill))
                 .border(0.5.dp, outline.copy(alpha = 0.7f), barShape),
         )
 
@@ -164,7 +168,7 @@ fun GlassNavBar(
                 .align(Alignment.CenterStart)
                 .offset { IntOffset((center - tabW / 2 + 0f).roundToInt(), 0) }
                 .width(with(density) { tabW.toDp() })
-                .height(52.dp)
+                .height(barH - 12.dp)
                 .graphicsLayer {
                     val sc = 1f + 0.34f * pop
                     scaleX = sc; scaleY = 1f + 0.42f * pop
@@ -202,8 +206,8 @@ fun GlassNavBar(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    Icon(if (active) tab.selectedIcon else tab.icon, tab.label, tint = tint, modifier = Modifier.size(24.dp))
-                    Text(tab.label, color = tint, fontSize = 10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.W600)
+                    Icon(if (active) tab.selectedIcon else tab.icon, tab.label, tint = tint, modifier = Modifier.size(if (large) 28.dp else 24.dp))
+                    Text(tab.label, color = tint, fontSize = if (large) 11.sp else 10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.W600)
                 }
             }
         }

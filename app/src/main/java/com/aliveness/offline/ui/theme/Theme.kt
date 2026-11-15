@@ -65,7 +65,7 @@ object Dimens {
     val SmallRadius = 12.dp
     val ThumbRadius = 7.dp
     /** Space reserved at the bottom for the floating navigation bar. */
-    val NavBarSpace = 104.dp
+    val NavBarSpace = 124.dp
 }
 
 /** Decoded thumbnail edge (px), driven by the Thumbnail quality setting. */

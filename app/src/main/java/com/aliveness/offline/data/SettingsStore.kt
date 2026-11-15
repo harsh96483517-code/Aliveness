@@ -30,6 +30,13 @@ data class AppSettings(
     val dockReels: Boolean = true,
     val liquidDock: Boolean = true,
     val dockHaptics: Boolean = true,
+    val dockLarge: Boolean = true,
+    /** 0 = clear, 1 = frosted, 2 = solid. */
+    val dockGlass: Int = 0,
+    val appLock: Boolean = false,
+    val reelsMuted: Boolean = false,
+    val reelsCaption: Boolean = true,
+    val reelsProgress: Boolean = true,
     val hiddenFolders: Set<String> = emptySet(),
     val lastScanAt: Long = 0L,
 ) {
@@ -49,6 +56,12 @@ object Keys {
     val dockReels = booleanPreferencesKey("dock_reels")
     val liquidDock = booleanPreferencesKey("liquid_dock")
     val dockHaptics = booleanPreferencesKey("dock_haptics")
+    val dockLarge = booleanPreferencesKey("dock_large")
+    val dockGlass = intPreferencesKey("dock_glass")
+    val appLock = booleanPreferencesKey("app_lock")
+    val reelsMuted = booleanPreferencesKey("reels_muted")
+    val reelsCaption = booleanPreferencesKey("reels_caption")
+    val reelsProgress = booleanPreferencesKey("reels_progress")
     val hidden = stringSetPreferencesKey("hidden_folders")
     val lastScan = longPreferencesKey("last_scan")
 }
@@ -69,6 +82,12 @@ class SettingsStore(private val context: Context) {
             dockReels = p[Keys.dockReels] ?: true,
             liquidDock = p[Keys.liquidDock] ?: true,
             dockHaptics = p[Keys.dockHaptics] ?: true,
+            dockLarge = p[Keys.dockLarge] ?: true,
+            dockGlass = p[Keys.dockGlass] ?: 0,
+            appLock = p[Keys.appLock] ?: false,
+            reelsMuted = p[Keys.reelsMuted] ?: false,
+            reelsCaption = p[Keys.reelsCaption] ?: true,
+            reelsProgress = p[Keys.reelsProgress] ?: true,
             hiddenFolders = p[Keys.hidden] ?: emptySet(),
             lastScanAt = p[Keys.lastScan] ?: 0L,
         )

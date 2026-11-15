@@ -156,6 +156,7 @@ fun AlivenessRoot(vm: MainViewModel, onImmersiveChanged: (Boolean) -> Unit) {
             GlassNavBar(
                 tabs = tabs, selectedRoute = route, haze = haze,
                 liquid = settings.liquidDock, haptics = settings.dockHaptics,
+                large = settings.dockLarge, glass = settings.dockGlass,
                 modifier = Modifier.navigationBarsPadding().padding(bottom = 12.dp),
                 onSelect = { tab ->
                     if (tab.route == REELS_TAB) {
